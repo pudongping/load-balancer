@@ -30,20 +30,6 @@ class SmoothWeightedRoundRobin
      */
     public $servers;
 
-    /**
-     * 当前被挑中的节点的索引位置
-     *
-     * @var int
-     */
-    private $currentIndex;
-
-    /**
-     * 被挑中的服务器节点（其实已知 currentIndex 就可得 best，但是考虑到尽可能的和源码相似，故作保留）
-     *
-     * @var array
-     */
-    private $best;
-
     public function __construct(array $servers)
     {
         $this->servers = $servers;
@@ -61,6 +47,8 @@ class SmoothWeightedRoundRobin
         }
 
         $total = 0;  // 所有的有效权重之和
+        $index = -1;  // 记录被挑选的服务节点在所有服务器的索引位置
+        $best = null;  // 被挑选的服务节点
 
         foreach ($this->servers as $key => $peer) {
             // 当前节点的当前权重 = 当前权重 + 有效权重
@@ -73,23 +61,21 @@ class SmoothWeightedRoundRobin
             //     $this->servers[$key]['effective_weight']++;
             // }
 
-            // echo("key={$key} ==> {$this->servers[$key]['current_weight']} > {$this->best['current_weight']} \r\n");
-
-            if ($this->best === null || $this->servers[$key]['current_weight'] > $this->best['current_weight']) {
-                $this->best = $this->servers[$key];
-                $this->currentIndex = $key;
+            // 此时的所有节点中，当前权重最大的节点作为最佳节点
+            if ($best === null || $this->servers[$key]['current_weight'] > $best['current_weight']) {
+                $best = $this->servers[$key];
+                $index = $key;
             }
         }
 
-        if ($this->best === null) {
+        if ($best === null) {
             return null;
         }
 
-        $this->servers[$this->currentIndex]['current_weight'] -= $total;
-        $this->best['current_weight'] -= $total;
+        $this->servers[$index]['current_weight'] -= $total;
 
-        // echo "\r\n";
-        return $this->best;
+        // 不能返回 $best 因为数据已经发生了变化
+        return $this->servers[$index];
     }
 
     /**
@@ -109,7 +95,14 @@ class SmoothWeightedRoundRobin
             }
         }
 
-        ! is_null($index) && $this->servers[$index]['effective_weight'] += $step;
+        if (! is_null($index)) {
+            $after = $this->servers[$index]['effective_weight'] + $step;
+            if ($after >= 1 && $after <= $this->servers[$index]) {
+                // 节点的有效权重，不要小于 1 且不要超过初始权重
+                $this->servers[$index]['effective_weight'] = $after;
+            }
+        }
+
     }
 
 }
