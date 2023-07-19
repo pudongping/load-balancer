@@ -1,7 +1,7 @@
 package robin
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 )
 
 type SimpleRoundRobin struct {
