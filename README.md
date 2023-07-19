@@ -4,17 +4,17 @@
 
 > 本示例提供了 [php 版本](./php/Robin) 和 [golang 版本](./golang/robin)
 
-## 简单轮询
+## 1. 简单轮询
 
 [示例代码](./php/Robin/SimpleRoundRobin.php)
 
 优点：
-- 简单明了
+- 通过取模算法得到节点。算法过程简单明了。
 
 缺点：
 - 不支持配置权重
 
-## 加权轮询
+## 2. 加权轮询
 
 [示例代码](./php/Robin/WeightedRoundRobin.php)
 
@@ -28,12 +28,13 @@
 
 - [负载均衡算法 — 轮询](https://www.fanhaobai.com/2018/11/load-balance-round-robin.html)
 
-## 平滑加权轮询（加权动态优先级算法）
+## 3. 平滑加权轮询（加权动态优先级算法）
 
-算法特点：  
+算法逻辑实现描述：  
 1. 当前节点的当前权重 current_weight = 上一次当前节点的当前权重 current_weight + 当前节点的有效权重 effective_weight
-2. 在当前所有节点中，选出此时当前权重 current_weight 最大的那个节点作为最佳节点。如果出现有多个节点 current_weight 同时最大，那么则以第一个 current_weight 最大节点为最佳节点。
-3. 选出的最佳节点的当前权重 current_weight 减去所有节点有效权重 effective_weight 之和
+2. 计算出所有节点的有效权重 effective_weight 之和 total
+3. 在当前所有节点中，选出此时当前权重 current_weight 最大的那个节点作为最佳节点。如果出现有多个节点 current_weight 同时最大，那么则以第一个 current_weight 最大节点为最佳节点。
+4. 选出的最佳节点的当前权重 current_weight 减去所有节点有效权重 effective_weight 之和 total。其他节点的 current_weight 不发生变化。
 
 > 其实不难发现，直接影响节点选中的因素就是节点的 effective_weight 值，那么 weight 又是做啥的呢？其实 weight 就单纯用于作为初始权重，可以理解为就是固定配置。最初时，effective_weight 就为 weight 的值，作为初始值。算法运算过程中时，我们可以对 effective_weight 的值
 > 做变更，达到动态控制权重的效果，减少则降低权重，增加则加大权重，但是增加 effective_weight 时，不要超过 weight 的值，否则则有可能超过了最初的所有节点的总权重之和，这样貌似之前设置的初始权重 weight 就没有太大的意义了。比如说，初始值 weight 为 {a:5, b:1, c:1} 此时 a 节点
@@ -65,7 +66,10 @@
 | c | 1                          | 1                                   | 0                                                                          |
 
 
-假设轮询 8 次，因为权重分别为 `{a:5, b:1, c:1}` 那么也就意味着 5+1+1=7 次循环为一个周期，且在一个周期内 a 被选中 5 次，b 被选中 1 次，c 被选中 1 次，第 8 次循环时，又是一个新的周期开始，且选中顺序和第一个周期的选中顺序一致。
+假设轮询 8 次，因为权重分别为 `{a:5, b:1, c:1}` 那么也就意味着 5+1+1=7 次循环为一个周期，且在一个周期内 a 一定被选中 5 次，b 一定被选中 1 次，c 一定被选中 1 次，符合设定的权重值。
+并且，第 7 次循环（刚好一个轮询周期结束）后，各个节点的 current_weight 又会恢复到初始状态 0 值。在一个周期内权重大的节点不会被连续选中，整个分布尽可能均匀。
+第 8 次循环时，又是一个新的周期开始，且选中顺序和第一个周期的选中顺序一致。  
+
 代码比较过程如下：
 
 | 轮询次数 | current_weight 变化前（current_weight += effective_weight） | 被选中的节点 best                                 | current_weight 变化后（被选中节点的当前权重 current_weight 要减去所有节点 effective_weight 之和） |
@@ -78,3 +82,10 @@
 | 6    | {a:9=4+5, b:-1=-2+1, c:-1=-2+1}                        | 9 最大，则选 a                                   | {a:2=9-7, b:-1, c:-1}                                                     |
 | 7    | {a:7=2+5, b:0=-1+1, c:0=-1+1}                          | 7 最大，则选 a                                   | {a:0=7-7, b:0, c:0}                                                       |
 | 8    | {a:5=0+5, b:1=0+1, c:1=0+1}                            | 5 最大，则选 a                                   | {a:-2=5-7, b:1, c:1}                                                      |
+
+
+4. 一致性哈希
+
+参考文献：
+
+- [Nginx 开发](https://www.kancloud.cn/digest/sknginx/130034)
