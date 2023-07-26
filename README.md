@@ -86,6 +86,10 @@
 
 4. 一致性哈希
 
+[示例代码](./php/ConsistentHash/ConsistentHashing.php)
+
 参考文献：
 
 - [Nginx 开发](https://www.kancloud.cn/digest/sknginx/130034)
+- [数据分布算法：hash+ 一致性 hash + redis cluster 的 hash slot](https://zq99299.github.io/note-book/cache-pdp/redis/027.html)
+- [常见的分布式算法](https://pudongping.github.io/posts/aa516918.html)
