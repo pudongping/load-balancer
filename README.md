@@ -84,7 +84,7 @@
 | 8    | {a:5=0+5, b:1=0+1, c:1=0+1}                            | 5 最大，则选 a                                   | {a:-2=5-7, b:1, c:1}                                                      |
 
 
-4. 一致性哈希
+## 4. 一致性哈希
 
 [示例代码](./php/ConsistentHash/ConsistentHashing.php)
 
